@@ -7,3 +7,16 @@ export const signInDefaultValues = {
     email: "",
     password: "",
 };
+export const signUpDefaultValues = {
+    email: "",
+    name: "",
+    confirmPassword: "",
+    password: "",
+};
+export const shippingAddressDefaultValues = {
+    fullName:'Huu Hoc',
+    streetAddress:'130 thanh thuy',
+    city:'Da Nang',
+    postalCode:'50000',
+    country:'Viet Nam',
+}
