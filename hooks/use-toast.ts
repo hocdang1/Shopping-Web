@@ -1,5 +1,5 @@
-import { toast } from "sonner";
+  import { toast } from "sonner";
 
-export function useToast() {
-  return { toast };
-}
+  export function useToast() {
+    return { toast };
+  }
