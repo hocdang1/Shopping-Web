@@ -15,7 +15,7 @@ const PaymentMethodPage = async() => {
 
     const user = await getUserById(userId);
     return ( <>
-    <CheckoutSteps/>
+    <CheckoutSteps current={2}/>
     <PaymentMethodForm preferredPaymentMethod={user.paymentMethod}/>
     
     </> );

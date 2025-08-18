@@ -6,7 +6,7 @@ import { auth, signIn, signOut } from '@/auth';
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { hashSync} from "bcrypt-ts";
 import { prisma } from "@/db/prisma";
-import { formatError } from "../utils";
+import { convertToPlainObject, formatError } from "../utils";
 import { ShippingAddress } from "@/types";
 import z from "zod";
 
@@ -135,3 +135,15 @@ export async function updateUserPaymentMethod(data: z.infer<typeof paymentMethod
   }
 
   }
+  // Get order by id 
+  export async function getOrderById(orderId: string) {
+    const data = await prisma.order.findFirst({
+      where: { id: orderId },
+      include: {
+        OrderItem: true,
+        user: {
+          select:  { name: true, email: true } },
+        },
+  });
+  return convertToPlainObject(data);
+};

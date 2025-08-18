@@ -16,21 +16,17 @@ export function formatNumberWithDecimal(num: number): string {
   return num.toFixed(2);
 }
 //format error for zod
-  export function formatError(error: any) {
-    if(error.name === "ZodError") {
-      // Handle ZodError
-      const fieldErrors = Object.keys(error.errors).map((field) =>error.errors[field].message); 
-      return fieldErrors.join(". ");
-    }else if(error.name === "PrismaClientKnownRequestError" && error.code === "P2002") {
-      // Hanle Prisma error
-      const field = error.meta?.target ? error.meta.target[0] : "Field";
-      return `${field.charAt(0).toUpperCase() + field.slice(1)} already exists.`;
-    }else {
-      // Handle other errors
-      return typeof error.message === "string" ? error.message
-      : JSON.stringify(error.message);
-    }
+ export function formatError(error: any) {
+  if (error.name === "ZodError") {
+    const fieldErrors = error.errors ? Object.keys(error.errors).map((field) => error.errors[field].message):[];
+    return fieldErrors.join(". ");
+  } else if (error.name === "PrismaClientKnownRequestError" && error.code === "P2002") {
+    const field = error.meta?.target ? error.meta.target[0] : "Field";
+    return `${field.charAt(0).toUpperCase() + field.slice(1)} already exists.`;
+  } else {
+    return typeof error.message === "string" ? error.message : JSON.stringify(error.message);
   }
+}
   export function round2(value: number | string) {
   if (typeof value === 'number') {
     return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -41,7 +37,7 @@ export function formatNumberWithDecimal(num: number): string {
   }
 }
 
-const CURRENCY_FOMATTER =new Intl.NumberFormat('en-US',{
+const CURRENCY_FORMATTER =new Intl.NumberFormat('en-US',{
   currency:'USD',
   style:'currency',
   minimumFractionDigits:2
@@ -49,11 +45,56 @@ const CURRENCY_FOMATTER =new Intl.NumberFormat('en-US',{
 // format currency using the formatter above
 export function formatCurrency(amount:number|string|null){
   if (typeof amount ==='number'){
-    return CURRENCY_FOMATTER.format(amount);
+    return CURRENCY_FORMATTER.format(amount);
 
   }else if (typeof amount === 'string'){
-    return CURRENCY_FOMATTER.format(Number(amount));
+    return CURRENCY_FORMATTER.format(Number(amount));
   }else{
     return 'NaN'
   }
 }
+
+//shorten UUID
+export function formatID(id: string): string {
+  return `${id.substring(0, 4)}..${id.substring(id.length - 4)}`;
+}
+
+//Format date to dd/mm/yyyy
+export const formatDateTime = (dateString: Date) => {
+  const dateTimeOptions: Intl.DateTimeFormatOptions = {
+    month: 'short', // abbreviated month name (e.g., 'Oct')
+    year: 'numeric', // abbreviated month name (e.g., 'Oct')
+    day: 'numeric', // numeric day of the month (e.g., '25')
+    hour: 'numeric', // numeric hour (e.g., '8')
+    minute: 'numeric', // numeric minute (e.g., '30')
+    hour12: true, // use 12-hour clock (true) or 24-hour clock (false)
+  };
+  const dateOptions: Intl.DateTimeFormatOptions = {
+    weekday: 'short', // abbreviated weekday name (e.g., 'Mon')
+    month: 'short', // abbreviated month name (e.g., 'Oct')
+    year: 'numeric', // numeric year (e.g., '2023')
+    day: 'numeric', // numeric day of the month (e.g., '25')
+  };
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: 'numeric', // numeric hour (e.g., '8')
+    minute: 'numeric', // numeric minute (e.g., '30')
+    hour12: true, // use 12-hour clock (true) or 24-hour clock (false)
+  };
+  const formattedDateTime: string = new Date(dateString).toLocaleString(
+    'en-US',
+    dateTimeOptions
+  );
+  const formattedDate: string = new Date(dateString).toLocaleString(
+    'en-US',
+    dateOptions
+  );
+  const formattedTime: string = new Date(dateString).toLocaleString(
+    'en-US',
+    timeOptions
+  );
+  return {
+    dateTime: formattedDateTime,
+    dateOnly: formattedDate,
+    timeOnly: formattedTime,
+  };
+};

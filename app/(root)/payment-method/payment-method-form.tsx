@@ -8,7 +8,7 @@ import { paymentMethodSchema } from "@/lib/constants/validators";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { DEFAULT_PAYMENT_METHOD, PAYMENT_METHODS } from "@/lib/constants";
-import z from "zod";
+import {z} from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Loader } from "lucide-react";
@@ -24,7 +24,7 @@ const PaymentMethodForm = ({
     const form = useForm<z.infer<typeof paymentMethodSchema>>({
         resolver: zodResolver(paymentMethodSchema),
         defaultValues:{
-            type: preferredPaymentMethod || DEFAULT_PAYMENT_METHOD
+            type: preferredPaymentMethod || DEFAULT_PAYMENT_METHOD, 
         }
     });
     const [isPending, startTransition] = useTransition();
@@ -60,7 +60,7 @@ return;
                 render={({field})=> (
                     <FormItem className = 'space-y-3'>
                         <FormControl>
-                            <RadioGroup onValueChange={field.onChange} className="flex flex-col space-y-2">
+                            <RadioGroup value={field.value} onValueChange={field.onChange} className="flex flex-col space-y-2">
                                 {PAYMENT_METHODS.map((paymentMethod)=>(
                                     <FormItem key={paymentMethod} className="flex items-center space-x-3 space-y-0">
                                         <FormControl>
