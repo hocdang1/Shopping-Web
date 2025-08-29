@@ -29,7 +29,9 @@ const PlaceOrderPage = async () => {
   const session = await auth();
   const userId = session?.user?.id;
 
-  if (!userId) throw new Error("User not found");
+  if (!userId) {
+  redirect(`/sign-in?callbackUrl=/place-order`);
+}
 
   const user = await getUserById(userId);
 
@@ -53,7 +55,7 @@ const PlaceOrderPage = async () => {
                 {userAddress.postalCode}, {userAddress.country}{" "}
               </p>
               <div className="mt-3">
-                <Link href="shipping-address">
+                <Link href="/shipping-address">
                   <Button variant="outline">Edit</Button>
                 </Link>
               </div>
@@ -66,7 +68,7 @@ const PlaceOrderPage = async () => {
               <p>{user.paymentMethod}</p>
 
               <div className="mt-3">
-                <Link href="payment-method">
+                <Link href="/payment-method">
                   <Button variant="outline">Edit</Button>
                 </Link>
               </div>

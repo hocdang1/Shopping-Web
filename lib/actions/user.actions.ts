@@ -1,49 +1,54 @@
 'use server';
 
-import { shippingAddressSchema, signInFormSchema, signUpFormSchema, paymentMethodSchema } from "@/lib/constants/validators";
-import { auth, signIn, signOut } from '@/auth';
+import {
+  shippingAddressSchema,
+  signInFormSchema,
+  signUpFormSchema,
+  paymentMethodSchema,
+} from "@/lib/constants/validators";
+import { auth, signIn, signOut } from "@/auth";
 
 import { isRedirectError } from "next/dist/client/components/redirect-error";
-import { hashSync} from "bcrypt-ts";
+import { hashSync } from "bcrypt-ts";
 import { prisma } from "@/db/prisma";
 import { convertToPlainObject, formatError } from "../utils";
 import { ShippingAddress } from "@/types";
 import z from "zod";
 
-// Đăng nhập với credentials (email & password)
+// ------------------- SIGN IN -------------------
 export async function signInWithCredentials(prevState: unknown, formData: FormData) {
   try {
-    // Validate dữ liệu từ form bằng zod schema
     const user = signInFormSchema.parse({
-      email: formData.get('email'),
-      password: formData.get('password'),
+      email: formData.get("email"),
+      password: formData.get("password"),
     });
 
-    // Gọi hàm signIn từ NextAuth, sử dụng provider 'credentials'
-    await signIn('credentials', user);
+    // callbackUrl từ hidden input trong form
+    const callbackUrl = (formData.get("callbackUrl") as string) || "/";
 
-    return { success: true, message:' Signed in successfully' };
+    await signIn("credentials", {
+      email: user.email,
+      password: user.password,
+      redirectTo: callbackUrl,
+    });
 
+    return { success: true, message: "Signed in successfully" };
   } catch (error) {
-    // Nếu là lỗi redirect, thì throw lại (bắt buộc trong Next.js 13/14 khi sử dụng server action)
     if (isRedirectError(error)) {
       throw error;
     }
-
-    // Trường hợp còn lại: có thể là lỗi xác thực, lỗi từ zod, hoặc lỗi khác
     return { success: false, message: "Invalid email or password" };
   }
 }
 
-// Đăng xuất người dùng
+// ------------------- SIGN OUT -------------------
 export async function signOutUser() {
-  // Hàm signOut cần viết đúng chữ thường: signOut (không phải SignOut)
   await signOut();
 }
 
+// ------------------- SIGN UP -------------------
 export async function signUpUser(prevState: unknown, formData: FormData) {
   try {
-    // Parse form
     const user = signUpFormSchema.parse({
       name: formData.get("name"),
       email: formData.get("email"),
@@ -51,99 +56,118 @@ export async function signUpUser(prevState: unknown, formData: FormData) {
       confirmPassword: formData.get("confirmPassword"),
     });
 
-    // Mã hóa mật khẩu
+    // Hash password
     const plainPassword = user.password;
-   user.password = hashSync(user.password, 10);
-    // Lưu user vào DB
+    user.password = hashSync(user.password, 10);
+
+    // Tạo user + 1 giỏ hàng trống
     await prisma.user.create({
       data: {
         name: user.name,
         email: user.email,
         password: user.password,
+        Carts: {
+          create: {
+            items: [], // đảm bảo không null
+            itemsPrice: 0,
+            totalPrice: 0,
+            shippingPrice: 0,
+            taxPrice: 0,
+          },
+        },
       },
     });
 
-    await signIn('credentials', {
+    // callbackUrl từ hidden input trong form
+    const callbackUrl = (formData.get("callbackUrl") as string) || "/";
+
+    // Auto sign in ngay sau khi đăng ký
+    await signIn("credentials", {
       email: user.email,
       password: plainPassword,
+      redirectTo: callbackUrl,
     });
-    return { success: true, message: 'Signed up successfully' };
+
+    return { success: true, message: "Signed up successfully" };
   } catch (error) {
-  
     if (isRedirectError(error)) {
       throw error;
     }
-
     return { success: false, message: formatError(error) };
   }
 }
-export async function getUserById(userId:string){
+
+// ------------------- GET USER BY ID -------------------
+export async function getUserById(userId: string) {
   const user = await prisma.user.findFirst({
-    where :{id:userId},
+    where: { id: userId },
   });
-  if(!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
   return user;
 }
 
-//update the user's address
-export async function updateUserAddress(data: ShippingAddress){
-  try{
+// ------------------- UPDATE USER ADDRESS -------------------
+export async function updateUserAddress(data: ShippingAddress) {
+  try {
     const session = await auth();
     const currentUser = await prisma.user.findFirst({
-      where: {id: session?.user?.id}
+      where: { id: session?.user?.id },
     });
 
-    if  (!currentUser) throw new Error ('User not found');
-    const address= shippingAddressSchema.parse(data);
+    if (!currentUser) throw new Error("User not found");
+
+    const address = shippingAddressSchema.parse(data);
 
     await prisma.user.update({
-      where: {id:currentUser.id},
-      data:{address}
+      where: { id: currentUser.id },
+      data: { address },
     });
 
     return {
-      success:true,
-      message:'User updated successfully',
+      success: true,
+      message: "User updated successfully",
     };
-
-  } catch (error){
-    return {success: false, message: formatError(error)}
+  } catch (error) {
+    return { success: false, message: formatError(error) };
   }
 }
-  
-//Update user's payment method
-export async function updateUserPaymentMethod(data: z.infer<typeof paymentMethodSchema>){
+
+// ------------------- UPDATE USER PAYMENT METHOD -------------------
+export async function updateUserPaymentMethod(
+  data: z.infer<typeof paymentMethodSchema>
+) {
   try {
-    const session = await auth ();
+    const session = await auth();
     const currentUser = await prisma.user.findFirst({
-      where: {id: session?.user?.id}
+      where: { id: session?.user?.id },
     });
-    if(!currentUser) throw new Error('User not found');
+
+    if (!currentUser) throw new Error("User not found");
 
     const paymentMethod = paymentMethodSchema.parse(data);
 
     await prisma.user.update({
-      where: {id: currentUser.id},
-      data: {paymentMethod: paymentMethod.type}
+      where: { id: currentUser.id },
+      data: { paymentMethod: paymentMethod.type },
     });
 
-    return{
-      success:true, message:'User updated successfully'
-    };
-  } catch (error){
-    return {success:false , message: formatError(error)}
+    return { success: true, message: "User updated successfully" };
+  } catch (error) {
+    return { success: false, message: formatError(error) };
   }
+}
 
-  }
-  // Get order by id 
-  export async function getOrderById(orderId: string) {
-    const data = await prisma.order.findFirst({
-      where: { id: orderId },
-      include: {
-        OrderItem: true,
-        user: {
-          select:  { name: true, email: true } },
-        },
+// ------------------- GET ORDER BY ID -------------------
+export async function getOrderById(orderId: string) {
+  const data = await prisma.order.findFirst({
+    where: { id: orderId },
+    include: {
+      OrderItem: true,
+      user: {
+        select: { name: true, email: true },
+      },
+    },
   });
+
   return convertToPlainObject(data);
-};
+}
